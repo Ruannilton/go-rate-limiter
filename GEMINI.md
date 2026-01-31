@@ -6,11 +6,13 @@ O projeto está organizado da seguinte forma:
 
 - **cmd/main/**: Contém o ponto de entrada da aplicação (main.go).
 - **internal/**: Implementa a lógica principal dos rate limiters, incluindo:
-  - `evaluator.go`: Avaliação e controle de limites.
-  - `fixed_window.go`: Implementação do algoritmo Fixed Window.
-  - `leaky_bucket.go`: Implementação do algoritmo Leaky Bucket.
-  - `token_bucket.go`: Implementação do algoritmo Token Bucket.
   - `interfaces.go`: Interfaces comuns para abstração dos limitadores.
+  - `limiter_fixed_window.go`: Implementação do algoritmo Fixed Window.
+  - `limiter_sliding_window_log.go`: Implementação do algoritmo Sliding Window Log.
+  - `limiter_token_bucket.go`: Implementação do algoritmo Token Bucket.
+  - `traffic_leaky_bucket.go`: Implementação do algoritmo Leaky Bucket.
+  - `request_pipeline.go` e `request_pipeline_response.go`: Pipeline de requisições e respostas dos limitadores.
+  - `router.go` e `router_builder.go`: Roteamento e construção de rotas para aplicação dos limitadores.
 - **tests/**: Local destinado aos testes das funcionalidades implementadas.
 - **bin/**: Diretório para binários gerados.
 - **go.mod**: Gerenciamento de dependências do Go.
@@ -23,8 +25,11 @@ O objetivo deste projeto é fornecer implementações eficientes e reutilizávei
 ## Funcionalidades
 
 - **Fixed Window Rate Limiter**: Limita o número de requisições em janelas de tempo fixas.
+- **Sliding Window Log Rate Limiter**: Limita requisições usando uma janela deslizante baseada em logs de timestamps.
 - **Leaky Bucket Rate Limiter**: Controla o fluxo de requisições de forma contínua, simulando um "balde furado".
 - **Token Bucket Rate Limiter**: Permite rajadas de requisições até um limite, reabastecendo tokens ao longo do tempo.
+- **Pipeline de Requisições**: Permite compor e encadear múltiplos limitadores.
+- **Roteamento Dinâmico**: Permite aplicar diferentes estratégias de rate limiting por rota.
 - **Interfaces Abstratas**: Facilita a extensão e integração de novos algoritmos de rate limiting.
 
 ## Descrição dos Testes
