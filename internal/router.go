@@ -11,7 +11,7 @@ type RouterNode struct {
 	children     map[string]*RouterNode
 	wildCardNode *RouterNode
 	varNode      *RouterNode
-	data         AlgorithmHandler
+	data         RequestPipeline
 }
 
 func NewRouter() *Router {
@@ -20,14 +20,7 @@ func NewRouter() *Router {
 	}
 }
 
-func newNode(part string) *RouterNode {
-	return &RouterNode{
-		pathPart: part,
-		children: make(map[string]*RouterNode),
-	}
-}
-
-func (self *Router) AddRoute(path string, handler AlgorithmHandler) {
+func (self *Router) setupPath(path string, handler RequestPipeline) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	current := self.root
 
@@ -57,7 +50,7 @@ func (self *Router) AddRoute(path string, handler AlgorithmHandler) {
 	current.data = handler
 }
 
-func (self *Router) GetRoute(path string) (AlgorithmHandler, bool) {
+func (self *Router) EvalRoute(path string) (RequestPipeline, bool) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 
 	type stackFrame struct {
@@ -72,7 +65,7 @@ func (self *Router) GetRoute(path string) (AlgorithmHandler, bool) {
 		frame := &stack[len(stack)-1]
 
 		if frame.partIndex == len(parts) {
-			if frame.node.data != nil {
+			if frame.node.data != (RequestPipeline{}) {
 				return frame.node.data, true
 			}
 			stack = stack[:len(stack)-1]
@@ -102,5 +95,13 @@ func (self *Router) GetRoute(path string) (AlgorithmHandler, bool) {
 		}
 	}
 
-	return nil, false
+	return RequestPipeline{}, false
+}
+
+func newNode(part string) *RouterNode {
+	return &RouterNode{
+		pathPart: part,
+		children: make(map[string]*RouterNode),
+		data: RequestPipeline{},
+	}
 }

@@ -1,0 +1,14 @@
+# routes.yaml
+- path: /api/v1/users
+  limiter:            
+    type: fixed_window
+    params:
+      capacity: 10
+      reset_interval: 0.1
+
+- path: /api/v1/download
+  traffic:             
+    type: leaky_bucket
+    params:
+      capacity: 10
+      drop_per_second: 1
