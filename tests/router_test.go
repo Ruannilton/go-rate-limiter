@@ -7,7 +7,8 @@ import (
 )
 
 func TestRouter_Priorities(t *testing.T) {
-	router := internal.NewRouter()
+	builder  := internal.NewRouterBuilder()
+	router := builder.GetRouter()
 	closeChan := make(chan struct{})
 	defer close(closeChan)
 
@@ -34,9 +35,9 @@ func TestRouter_Priorities(t *testing.T) {
 		},
 	}
 
-	router.AddRoute(staticDesc, closeChan)
-	router.AddRoute(varDesc, closeChan)
-	router.AddRoute(wildcardDesc, closeChan)
+	builder.AddRoute(staticDesc, closeChan)
+	builder.AddRoute(varDesc, closeChan)
+	builder.AddRoute(wildcardDesc, closeChan)
 
 	// Test Static Match
 	_, found := router.EvalRoute("/api/v1/users")
@@ -64,12 +65,13 @@ func TestRouter_Priorities(t *testing.T) {
 }
 
 func TestRouter_ConflictResolution(t *testing.T) {
+	builder  := internal.NewRouterBuilder()
 	router := internal.NewRouter()
 	closeChan := make(chan struct{})
 	defer close(closeChan)
 
 	// Add /a (capacity 1)
-	router.AddRoute(internal.RouteDescriptor{
+	builder.AddRoute(internal.RouteDescriptor{
 		Path: "/a",
 		LimiterDescriptor: &internal.StrategyDescriptor{
 			StrategyName: internal.LimiterStrategyFixedWindow,
@@ -78,7 +80,7 @@ func TestRouter_ConflictResolution(t *testing.T) {
 	}, closeChan)
 
 	// Add /:b (capacity 100)
-	router.AddRoute(internal.RouteDescriptor{
+	builder.AddRoute(internal.RouteDescriptor{
 		Path: "/:b",
 		LimiterDescriptor: &internal.StrategyDescriptor{
 			StrategyName: internal.LimiterStrategyFixedWindow,

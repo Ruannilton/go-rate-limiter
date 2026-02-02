@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	// 1. Create the main router
-	router := internal.NewRouter()
+	// 1. Create the main builder
+	builder := internal.NewRouterBuilder()
 	closeChannel := make(chan struct{})
 	defer func(){
 		closeChannel <- struct{}{}
@@ -23,10 +23,12 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-	err = router.LoadFromJson(data, closeChannel)
+	err = builder.LoadFromJson(data, closeChannel)
 	if err != nil {
 		log.Fatal(err)
 	}
+	
+	router := builder.GetRouter()
 	
 	for i := 0; i < 20; i++ {
 		pipeline, ok :=router.EvalRoute("/api/v1/users")

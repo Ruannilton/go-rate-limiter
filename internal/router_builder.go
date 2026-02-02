@@ -38,7 +38,7 @@ func NewRouterBuilder() *RouterBuilder {
 	}
 }
 
-func (r *Router) AddRoute(route RouteDescriptor, closeSign <-chan struct{}) error {
+func (r *RouterBuilder) AddRoute(route RouteDescriptor, closeSign <-chan struct{}) error {
 	var lim IRateLimiter
 	var traf ITrafficShapeAlgorithm
 
@@ -59,11 +59,11 @@ func (r *Router) AddRoute(route RouteDescriptor, closeSign <-chan struct{}) erro
 	}
 
 	pipeline := NewRequestPipeline(lim, traf)
-	r.setupPath(route.Path, pipeline)
+	r.router.setupPath(route.Path, pipeline)
 	return nil
 }
 
-func (r *Router) LoadFromJson(jsonData []byte, closeSign <-chan struct{}) error {
+func (r *RouterBuilder) LoadFromJson(jsonData []byte, closeSign <-chan struct{}) error {
 	
     var descriptors []RouteDescriptor
 
@@ -80,7 +80,7 @@ func (r *Router) LoadFromJson(jsonData []byte, closeSign <-chan struct{}) error 
     return nil
 }
 
-func (r *Router) LoadFromYaml(yamlData []byte, closeSign <-chan struct{}) error {
+func (r *RouterBuilder) LoadFromYaml(yamlData []byte, closeSign <-chan struct{}) error {
 
     var descriptors []RouteDescriptor
 
@@ -96,6 +96,12 @@ func (r *Router) LoadFromYaml(yamlData []byte, closeSign <-chan struct{}) error 
 
     return nil
 }
+
+func (r *RouterBuilder) GetRouter() *Router {
+	return r.router
+}
+
+
 
 func createTrafficShaperFromDescriptor(strategyDescriptor StrategyDescriptor, closeSign <-chan struct{}) (ITrafficShapeAlgorithm, error) {
 	switch strategyDescriptor.StrategyName {
