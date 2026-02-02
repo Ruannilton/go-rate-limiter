@@ -14,15 +14,15 @@ type RouterNode struct {
 	data         requestPipeline
 }
 
-func NewRouter() *Router {
-	return &Router{
+func newRouter() Router {
+	return Router{
 		root: newNode(""),
 	}
 }
 
-func (self *Router) setupPath(path string, handler requestPipeline) {
+func (r *Router) setupPath(path string, handler requestPipeline) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	current := self.root
+	current := r.root
 
 	for _, part := range parts {
 
@@ -50,7 +50,7 @@ func (self *Router) setupPath(path string, handler requestPipeline) {
 	current.data = handler
 }
 
-func (self *Router) evalRoute(path string) (requestPipeline, bool) {
+func (r *Router) evalRoute(path string) (requestPipeline, bool) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 
 	type stackFrame struct {
@@ -59,7 +59,7 @@ func (self *Router) evalRoute(path string) (requestPipeline, bool) {
 		state     int // 0: to visit static, 1: to visit var, 2: to visit wildcard
 	}
 
-	stack := []stackFrame{{node: self.root, partIndex: 0, state: 0}}
+	stack := []stackFrame{{node: r.root, partIndex: 0, state: 0}}
 
 	for len(stack) > 0 {
 		frame := &stack[len(stack)-1]
@@ -98,14 +98,13 @@ func (self *Router) evalRoute(path string) (requestPipeline, bool) {
 	return requestPipeline{}, false
 }
 
-func (r *Router) HandleRequest(path string) (RequestPipelineResponse, bool) {
+func (r Router) HandleRequest(path string) (RequestPipelineResponse, bool) {
 	pipeline, found := r.evalRoute(path)
 	if !found {
 		return newSyncRequestPipelineResponse(true), found
 	}
-	return pipeline.handleRequest(),true
+	return pipeline.handleRequest(), true
 }
-
 
 func newNode(part string) *RouterNode {
 	return &RouterNode{

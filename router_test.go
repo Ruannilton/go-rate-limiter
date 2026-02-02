@@ -5,10 +5,10 @@ import (
 )
 
 func TestRouter_Priorities(t *testing.T) {
-	builder := NewRouterBuilder()
-	router := builder.GetRouter()
 	closeChan := make(chan struct{})
 	defer close(closeChan)
+	
+	builder := NewRouterBuilder(closeChan)
 
 	// Mock descriptors
 	staticDesc := RouteDescriptor{
@@ -33,9 +33,11 @@ func TestRouter_Priorities(t *testing.T) {
 		},
 	}
 
-	builder.AddRoute(staticDesc, closeChan)
-	builder.AddRoute(varDesc, closeChan)
-	builder.AddRoute(wildcardDesc, closeChan)
+	builder.SetRoute(staticDesc)
+	builder.SetRoute(varDesc)
+	builder.SetRoute(wildcardDesc)
+
+	router := builder.Build()
 
 	// Test Static Match
 	_, found := router.evalRoute("/api/v1/users")
@@ -63,28 +65,30 @@ func TestRouter_Priorities(t *testing.T) {
 }
 
 func TestRouter_ConflictResolution(t *testing.T) {
-	builder := NewRouterBuilder()
-	router := NewRouter()
 	closeChan := make(chan struct{})
 	defer close(closeChan)
 
+	builder := NewRouterBuilder(closeChan)
+
 	// Add /a (capacity 1)
-	builder.AddRoute(RouteDescriptor{
+	builder.SetRoute(RouteDescriptor{
 		Path: "/a",
 		LimiterDescriptor: &StrategyDescriptor{
 			StrategyName: LimiterStrategyFixedWindow,
 			Params:       map[string]any{"capacity": 1, "reset_interval": 10.0},
 		},
-	}, closeChan)
+	})
 
 	// Add /:b (capacity 100)
-	builder.AddRoute(RouteDescriptor{
+	builder.SetRoute(RouteDescriptor{
 		Path: "/:b",
 		LimiterDescriptor: &StrategyDescriptor{
 			StrategyName: LimiterStrategyFixedWindow,
 			Params:       map[string]any{"capacity": 100, "reset_interval": 10.0},
 		},
-	}, closeChan)
+	})
+
+	router := builder.Build()
 
 	// Request /a
 	// Should hit Static (/a) -> Capacity 1.

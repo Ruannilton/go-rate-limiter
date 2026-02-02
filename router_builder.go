@@ -29,16 +29,42 @@ type RouteDescriptor struct {
 }
 
 type RouterBuilder struct {
-	router *Router
+	descriptors  map[string]RouteDescriptor
+	closeSignal <-chan struct{}
 }
 
-func NewRouterBuilder() *RouterBuilder {
-	return &RouterBuilder{
-		router: NewRouter(),
+func NewRouterBuilder(closeSign <-chan struct{}) RouterBuilder {
+	return RouterBuilder{
+		descriptors: make(map[string]RouteDescriptor),
+		closeSignal: closeSign,
 	}
 }
 
-func (r *RouterBuilder) AddRoute(route RouteDescriptor, closeSign <-chan struct{}) error {
+func (r *RouterBuilder) Build() Router {
+	router := newRouter()
+	for _, route := range r.descriptors {
+		router.setupRoute(route, r.closeSignal)
+	}
+	return router
+}
+
+func (r *RouterBuilder) SetRoute(route RouteDescriptor) {
+	r.descriptors[route.Path] = route
+}
+
+func (r *RouterBuilder) RemoveRoute(path string) {
+	delete(r.descriptors, path)
+}
+
+func (r *RouterBuilder) GetRouteDescriptors() []RouteDescriptor {
+	descriptors := make([]RouteDescriptor, 0, len(r.descriptors))
+	for _, route := range r.descriptors {
+		descriptors = append(descriptors, route)
+	}
+	return descriptors
+}
+
+func (r *Router) setupRoute(route RouteDescriptor, closeSign <-chan struct{}) error {
 	var lim iRateLimiter
 	var traf iTrafficShapeAlgorithm
 
@@ -59,11 +85,11 @@ func (r *RouterBuilder) AddRoute(route RouteDescriptor, closeSign <-chan struct{
 	}
 
 	pipeline := newRequestPipeline(lim, traf)
-	r.router.setupPath(route.Path, pipeline)
+	r.setupPath(route.Path, pipeline)
 	return nil
 }
 
-func (r *RouterBuilder) LoadFromJson(jsonData []byte, closeSign <-chan struct{}) error {
+func (r *RouterBuilder) LoadFromJson(jsonData []byte) error {
 
 	var descriptors []RouteDescriptor
 
@@ -72,15 +98,13 @@ func (r *RouterBuilder) LoadFromJson(jsonData []byte, closeSign <-chan struct{})
 	}
 
 	for _, routeDesc := range descriptors {
-		if err := r.AddRoute(routeDesc, closeSign); err != nil {
-			return fmt.Errorf("erro ao adicionar rota '%s': %w", routeDesc.Path, err)
-		}
+		  r.SetRoute(routeDesc);
 	}
 
 	return nil
 }
 
-func (r *RouterBuilder) LoadFromYaml(yamlData []byte, closeSign <-chan struct{}) error {
+func (r *RouterBuilder) LoadFromYaml(yamlData []byte) error {
 
 	var descriptors []RouteDescriptor
 
@@ -89,16 +113,10 @@ func (r *RouterBuilder) LoadFromYaml(yamlData []byte, closeSign <-chan struct{})
 	}
 
 	for _, routeDesc := range descriptors {
-		if err := r.AddRoute(routeDesc, closeSign); err != nil {
-			return fmt.Errorf("erro ao adicionar rota '%s': %w", routeDesc.Path, err)
-		}
+		 r.SetRoute(routeDesc);
 	}
 
 	return nil
-}
-
-func (r *RouterBuilder) GetRouter() *Router {
-	return r.router
 }
 
 func createTrafficShaperFromDescriptor(strategyDescriptor StrategyDescriptor, closeSign <-chan struct{}) (iTrafficShapeAlgorithm, error) {
