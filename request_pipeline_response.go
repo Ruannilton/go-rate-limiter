@@ -1,4 +1,4 @@
-package internal
+package rate_limiter
 
 type RequestPipelineResponse struct {
 	allowed           bool
@@ -6,14 +6,14 @@ type RequestPipelineResponse struct {
 	asyncResponseChan <-chan bool
 }
 
-func NewSyncRequestPipelineResponse(allowed bool) RequestPipelineResponse {
+func newSyncRequestPipelineResponse(allowed bool) RequestPipelineResponse {
 	return RequestPipelineResponse{
 		allowed:       allowed,
 		asyncResponse: false,
 	}
 }
 
-func NewAsyncRequestPipelineResponse(asyncResponseChan <-chan bool) RequestPipelineResponse {
+func newAsyncRequestPipelineResponse(asyncResponseChan <-chan bool) RequestPipelineResponse {
 	return RequestPipelineResponse{
 		asyncResponse:     true,
 		asyncResponseChan: asyncResponseChan,

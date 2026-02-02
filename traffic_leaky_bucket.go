@@ -1,25 +1,25 @@
-package internal
+package rate_limiter
 
 import (
 	"errors"
 	"time"
 )
 
-type LeakyBucketTrafficShaper struct {
+type leakyBucketTrafficShaper struct {
 	ticker      *time.Ticker
 	queue       chan chan bool
 	closeSignal <-chan struct{}
 }
 
-func NewLeakyBucketTrafficShaper(capacity int, dropPerSecond int, closeSignal <-chan struct{}) *LeakyBucketTrafficShaper {
+func newLeakyBucketTrafficShaper(capacity int, dropPerSecond int, closeSignal <-chan struct{}) *leakyBucketTrafficShaper {
 	interval := time.Second / time.Duration(dropPerSecond)
 
-	shaper := &LeakyBucketTrafficShaper{
+	shaper := &leakyBucketTrafficShaper{
 		ticker:      time.NewTicker(interval),
 		queue:       make(chan chan bool, capacity),
 		closeSignal: closeSignal,
 	}
-	go func(shaper *LeakyBucketTrafficShaper) {
+	go func(shaper *leakyBucketTrafficShaper) {
 		for {
 			select {
 			case <-shaper.ticker.C:
@@ -38,31 +38,28 @@ func NewLeakyBucketTrafficShaper(capacity int, dropPerSecond int, closeSignal <-
 	return shaper
 }
 
-func (l *LeakyBucketTrafficShaper) AddRequest() <-chan bool {
+func (l *leakyBucketTrafficShaper) addRequest() <-chan bool {
 	responseChan := make(chan bool, 1)
 	l.queue <- responseChan
 	return responseChan
 }
 
 type LeakyBucketTrafficShaperParams struct {
-	Capacity     int
+	Capacity      int
 	DropPerSecond int
 }
 
-func GetLeakyBucketTrafficShaperParamsFromMap(params map[string]any) (LeakyBucketTrafficShaperParams,error) {
+func getLeakyBucketTrafficShaperParamsFromMap(params map[string]any) (LeakyBucketTrafficShaperParams, error) {
 	capacity, capacityOk := getNumberFromMap[int](params, "capacity")
 	if !capacityOk {
-		return LeakyBucketTrafficShaperParams{},errors.New("invalid capacity parameter")
+		return LeakyBucketTrafficShaperParams{}, errors.New("invalid capacity parameter")
 	}
 	dropPerSecond, dropOk := getNumberFromMap[int](params, "drop_per_second")
 	if !dropOk {
-		return LeakyBucketTrafficShaperParams{},errors.New("invalid drop_per_second parameter")
+		return LeakyBucketTrafficShaperParams{}, errors.New("invalid drop_per_second parameter")
 	}
 	return LeakyBucketTrafficShaperParams{
-		Capacity:     capacity,
+		Capacity:      capacity,
 		DropPerSecond: dropPerSecond,
-	},nil
+	}, nil
 }
-
-
-

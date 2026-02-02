@@ -1,28 +1,26 @@
-package tests
+package rate_limiter
 
 import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/Ruannilton/go-rate-limiter/internal"
 )
 
 func TestSlidingWindowLogLimiter_Basic(t *testing.T) {
 	capacity := 3
 	window := 500 * time.Millisecond
-	limiter := internal.NewSlidingWindowLogLimiter(capacity, window)
+	limiter := newSlidingWindowLogLimiter(capacity, window)
 
 	// Fill the bucket
 	for i := 0; i < capacity; i++ {
-		resp := limiter.Eval()
+		resp := limiter.eval()
 		if allowed := <-resp.Allowed(); !allowed {
 			t.Errorf("Expected request %d to be allowed", i+1)
 		}
 	}
 
 	// Should be blocked
-	resp := limiter.Eval()
+	resp := limiter.eval()
 	if allowed := <-resp.Allowed(); allowed {
 		t.Errorf("Expected request to be blocked")
 	}
@@ -31,7 +29,7 @@ func TestSlidingWindowLogLimiter_Basic(t *testing.T) {
 	time.Sleep(window + 50*time.Millisecond)
 
 	// Should be allowed again
-	resp = limiter.Eval()
+	resp = limiter.eval()
 	if allowed := <-resp.Allowed(); !allowed {
 		t.Errorf("Expected request to be allowed after window expiration")
 	}
@@ -40,21 +38,21 @@ func TestSlidingWindowLogLimiter_Basic(t *testing.T) {
 func TestSlidingWindowLogLimiter_PartialExpiry(t *testing.T) {
 	capacity := 2
 	window := 200 * time.Millisecond
-	limiter := internal.NewSlidingWindowLogLimiter(capacity, window)
+	limiter := newSlidingWindowLogLimiter(capacity, window)
 
 	// 1st request
-	resp1 := limiter.Eval()
+	resp1 := limiter.eval()
 	<-resp1.Allowed()
-	
+
 	// Wait half window
 	time.Sleep(120 * time.Millisecond)
-	
+
 	// 2nd request
-	resp2 := limiter.Eval()
+	resp2 := limiter.eval()
 	<-resp2.Allowed()
 
 	// 3rd request (blocked)
-	resp3 := limiter.Eval()
+	resp3 := limiter.eval()
 	if allowed := <-resp3.Allowed(); allowed {
 		t.Errorf("Expected request to be blocked")
 	}
@@ -67,13 +65,13 @@ func TestSlidingWindowLogLimiter_PartialExpiry(t *testing.T) {
 	// Now first request should be gone, but second is still there.
 	// Capacity is 2. Used 1 (the 2nd request).
 	// So 1 request should be allowed.
-	resp4 := limiter.Eval()
+	resp4 := limiter.eval()
 	if allowed := <-resp4.Allowed(); !allowed {
 		t.Errorf("Expected request to be allowed after partial expiry")
 	}
 
 	// Now we are full again (2nd request + new request).
-	resp5 := limiter.Eval()
+	resp5 := limiter.eval()
 	if allowed := <-resp5.Allowed(); allowed {
 		t.Errorf("Expected request to be blocked again")
 	}
@@ -82,7 +80,7 @@ func TestSlidingWindowLogLimiter_PartialExpiry(t *testing.T) {
 func TestSlidingWindowLogLimiter_Concurrency(t *testing.T) {
 	capacity := 50
 	window := 1 * time.Second
-	limiter := internal.NewSlidingWindowLogLimiter(capacity, window)
+	limiter := newSlidingWindowLogLimiter(capacity, window)
 
 	var wg sync.WaitGroup
 	totalRequests := 100
@@ -93,7 +91,7 @@ func TestSlidingWindowLogLimiter_Concurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			resp := limiter.Eval()
+			resp := limiter.eval()
 			if allowed := <-resp.Allowed(); allowed {
 				mu.Lock()
 				allowedCount++

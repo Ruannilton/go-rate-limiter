@@ -1,10 +1,8 @@
-package tests
+package rate_limiter
 
 import (
 	"testing"
 	"time"
-
-	"github.com/Ruannilton/go-rate-limiter/internal"
 )
 
 func TestLeakyBucketTrafficShaper_Basic(t *testing.T) {
@@ -13,11 +11,11 @@ func TestLeakyBucketTrafficShaper_Basic(t *testing.T) {
 	closeChan := make(chan struct{})
 	defer close(closeChan)
 
-	shaper := internal.NewLeakyBucketTrafficShaper(capacity, rate, closeChan)
+	shaper := newLeakyBucketTrafficShaper(capacity, rate, closeChan)
 
 	// Add a request
 	start := time.Now()
-	respChan := shaper.AddRequest()
+	respChan := shaper.addRequest()
 
 	// Wait for response
 	select {
@@ -41,15 +39,15 @@ func TestLeakyBucketTrafficShaper_Queue(t *testing.T) {
 	closeChan := make(chan struct{})
 	defer close(closeChan)
 
-	shaper := internal.NewLeakyBucketTrafficShaper(capacity, rate, closeChan)
+	shaper := newLeakyBucketTrafficShaper(capacity, rate, closeChan)
 
 	// Add 2 requests (fits in queue)
-	ch1 := shaper.AddRequest()
-	ch2 := shaper.AddRequest()
+	ch1 := shaper.addRequest()
+	ch2 := shaper.addRequest()
 
 	// Both should eventually return
 	timeout := time.After(1 * time.Second)
-	
+
 	select {
 	case <-ch1:
 	case <-timeout:
@@ -70,15 +68,15 @@ func TestLeakyBucketTrafficShaper_Blocking(t *testing.T) {
 	closeChan := make(chan struct{})
 	defer close(closeChan)
 
-	shaper := internal.NewLeakyBucketTrafficShaper(capacity, rate, closeChan)
+	shaper := newLeakyBucketTrafficShaper(capacity, rate, closeChan)
 
 	// Fill queue
-	ch1 := shaper.AddRequest()
+	ch1 := shaper.addRequest()
 
 	// Next add should block until ticker fires (1s) and frees space
 	done := make(chan struct{})
 	go func() {
-		shaper.AddRequest()
+		shaper.addRequest()
 		close(done)
 	}()
 
@@ -98,5 +96,5 @@ func TestLeakyBucketTrafficShaper_Blocking(t *testing.T) {
 	}
 
 	// Consume ch1 to be clean
-	<-ch1 
+	<-ch1
 }

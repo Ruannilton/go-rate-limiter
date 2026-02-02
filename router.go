@@ -1,4 +1,4 @@
-package internal
+package rate_limiter
 
 import "strings"
 
@@ -11,7 +11,7 @@ type RouterNode struct {
 	children     map[string]*RouterNode
 	wildCardNode *RouterNode
 	varNode      *RouterNode
-	data         RequestPipeline
+	data         requestPipeline
 }
 
 func NewRouter() *Router {
@@ -20,7 +20,7 @@ func NewRouter() *Router {
 	}
 }
 
-func (self *Router) setupPath(path string, handler RequestPipeline) {
+func (self *Router) setupPath(path string, handler requestPipeline) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	current := self.root
 
@@ -50,7 +50,7 @@ func (self *Router) setupPath(path string, handler RequestPipeline) {
 	current.data = handler
 }
 
-func (self *Router) EvalRoute(path string) (RequestPipeline, bool) {
+func (self *Router) evalRoute(path string) (requestPipeline, bool) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 
 	type stackFrame struct {
@@ -65,7 +65,7 @@ func (self *Router) EvalRoute(path string) (RequestPipeline, bool) {
 		frame := &stack[len(stack)-1]
 
 		if frame.partIndex == len(parts) {
-			if frame.node.data != (RequestPipeline{}) {
+			if frame.node.data != (requestPipeline{}) {
 				return frame.node.data, true
 			}
 			stack = stack[:len(stack)-1]
@@ -95,13 +95,22 @@ func (self *Router) EvalRoute(path string) (RequestPipeline, bool) {
 		}
 	}
 
-	return RequestPipeline{}, false
+	return requestPipeline{}, false
 }
+
+func (r *Router) HandleRequest(path string) (RequestPipelineResponse, bool) {
+	pipeline, found := r.evalRoute(path)
+	if !found {
+		return newSyncRequestPipelineResponse(true), found
+	}
+	return pipeline.handleRequest(),true
+}
+
 
 func newNode(part string) *RouterNode {
 	return &RouterNode{
 		pathPart: part,
 		children: make(map[string]*RouterNode),
-		data: RequestPipeline{},
+		data:     requestPipeline{},
 	}
 }

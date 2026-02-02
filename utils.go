@@ -1,12 +1,8 @@
-package internal
+package rate_limiter
 
 import (
-
-
 	"golang.org/x/exp/constraints"
 )
-
-
 
 func getNumberFromMap[T constraints.Integer | constraints.Float](m map[string]any, key string) (T, bool) {
 	var value T

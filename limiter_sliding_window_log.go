@@ -1,4 +1,4 @@
-package internal
+package rate_limiter
 
 import (
 	"errors"
@@ -6,15 +6,15 @@ import (
 	"time"
 )
 
-type SlidingWindowLogLimiter struct {
+type slidingWindowLogLimiter struct {
 	logs       []int64
 	capacity   int
 	windowSize time.Duration
 	mutex      sync.Mutex
 }
 
-func NewSlidingWindowLogLimiter(capacity int, windowSize time.Duration) *SlidingWindowLogLimiter {
-	return &SlidingWindowLogLimiter{
+func newSlidingWindowLogLimiter(capacity int, windowSize time.Duration) *slidingWindowLogLimiter {
+	return &slidingWindowLogLimiter{
 		logs:       make([]int64, capacity),
 		capacity:   capacity,
 		windowSize: windowSize,
@@ -22,15 +22,13 @@ func NewSlidingWindowLogLimiter(capacity int, windowSize time.Duration) *Sliding
 	}
 }
 
-
-func (s *SlidingWindowLogLimiter) Eval() RequestPipelineResponse {
+func (s *slidingWindowLogLimiter) eval() RequestPipelineResponse {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	now := time.Now()
 	windowStart := now.Add(-s.windowSize)
 
-	
 	newLogs := make([]int64, 0, s.capacity)
 	for _, timestamp := range s.logs {
 		if timestamp >= windowStart.UnixNano() {
@@ -40,31 +38,31 @@ func (s *SlidingWindowLogLimiter) Eval() RequestPipelineResponse {
 	s.logs = newLogs
 
 	if len(s.logs) >= s.capacity {
-		return NewSyncRequestPipelineResponse(false)
+		return newSyncRequestPipelineResponse(false)
 	}
 
 	// Add new request timestamp
 	s.logs = append(s.logs, now.UnixNano())
-	return NewSyncRequestPipelineResponse(true)
+	return newSyncRequestPipelineResponse(true)
 }
 
-type SlidingWindowLogLimiterParams struct {
+type slidingWindowLogLimiterParams struct {
 	Capacity   int
 	WindowSize time.Duration
 }
 
-func GetSlidingWindowLogLimiterParamsFromMap(params map[string]any) (SlidingWindowLogLimiterParams,error) {
+func getSlidingWindowLogLimiterParamsFromMap(params map[string]any) (slidingWindowLogLimiterParams, error) {
 	capacity, capacityOk := getNumberFromMap[int](params, "capacity")
 	if !capacityOk {
-		return SlidingWindowLogLimiterParams{},errors.New("invalid capacity parameter")
+		return slidingWindowLogLimiterParams{}, errors.New("invalid capacity parameter")
 	}
 	windowSizeSeconds, intervalOk := getNumberFromMap[float64](params, "window_size")
 	if !intervalOk {
-		return SlidingWindowLogLimiterParams{},errors.New("invalid window_size parameter")
+		return slidingWindowLogLimiterParams{}, errors.New("invalid window_size parameter")
 	}
 	windowSize := time.Duration(windowSizeSeconds * float64(time.Second))
-	return SlidingWindowLogLimiterParams{
+	return slidingWindowLogLimiterParams{
 		Capacity:   capacity,
 		WindowSize: windowSize,
-	},nil
+	}, nil
 }
