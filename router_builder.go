@@ -113,10 +113,18 @@ func (r *RouterBuilder) LoadFromYaml(yamlData []byte) error {
 	}
 
 	for _, routeDesc := range descriptors {
-		 r.SetRoute(routeDesc);
+		r.SetRoute(routeDesc)
 	}
 
 	return nil
+}
+
+func (r *RouterBuilder) ExportToJson() ([]byte, error) {
+	return json.MarshalIndent(r.GetRouteDescriptors(), "", "  ")
+}
+
+func (r *RouterBuilder) ExportToYaml() ([]byte, error) {
+	return yaml.Marshal(r.GetRouteDescriptors())
 }
 
 func createTrafficShaperFromDescriptor(strategyDescriptor StrategyDescriptor, closeSign <-chan struct{}) (iTrafficShapeAlgorithm, error) {
